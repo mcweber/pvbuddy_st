@@ -5,12 +5,9 @@ VERSION ="09.02.2025"
 # ---------------------------------------------------
 
 import streamlit as st
+
 import ask_llm
-# import ask_web
-#import ask_legal_web
 import ask_mongo
-# import manage_user as user
-# import manage_prompts as prompts
 
 import os
 from dotenv import load_dotenv
@@ -38,7 +35,7 @@ def write_history() -> None:
 
 # Main -----------------------------------------------------------------
 def main() -> None:
-    st.set_page_config(page_title='lawbuddy', layout="wide", initial_sidebar_state="expanded")
+    st.set_page_config(page_title='pvBuddy', layout="wide", initial_sidebar_state="expanded")
 
     # Initialize Session State -----------------------------------------
     if 'init' not in st.session_state:
@@ -71,11 +68,6 @@ def main() -> None:
             st.session_state.model = radio
             st.rerun()
 
-        # checkbox = st.checkbox(label="LegalWeb-Suche", value=st.session_state.search_web)
-        # if checkbox != st.session_state.search_web:
-        #     st.session_state.search_web = checkbox
-        #     st.rerun()
-        
         checkbox = st.checkbox(label="DB-Suche", value=st.session_state.search_db)
         if checkbox != st.session_state.search_db:
             st.session_state.search_db = checkbox
@@ -136,57 +128,24 @@ def main() -> None:
     # Define Search & Search Results -------------------------------------------
     if st.session_state.search_status:
 
-        # Web Search ------------------------------------------------
-        # web_results_str = ""
-        # if st.session_state.search_web and st.session_state.results_web == "":
-        #     web_search_handler = ask_legal_web.LegalWebSearch()
-        #     results_statutes = web_search_handler.search_statutes(query=question, score=0.5, limit=st.session_state.results_limit)
-        #     results_jurisdiction = web_search_handler.search_jurisdiction(query=question, score=0.5, limit=st.session_state.results_limit)
-        #     results_comments = web_search_handler.search_comments(query=question, score=0.5, limit=st.session_state.results_limit)
-        #     web_results_str = results_statutes + results_jurisdiction + results_comments
-        #     with st.expander("WEB Suchergebnisse"):
-        #         st.write(results_statutes)
-        #         st.divider()
-        #         st.write(results_jurisdiction)
-        #         st.divider()
-        #         st.write(results_comments)
-        #         # for result in results:
-        #         #     st.write(f"[{round(result['score'], 3)}] {result['title']} [{result['url']}]")
-        #         #     # web_results_str += f"Titel: {result['title']}\nURL: {result['url']}\n\n"
-        #         #     web_results_str += f"Titel: {result['title']}\nURL: {result['url']}\nText: {result['content']}\n\n"
-        #     st.session_state.results_web = web_results_str
-
         # Database Search ------------------------------------------------
         db_results_str = ""
         if st.session_state.search_db and st.session_state.results_db == "":
 
             if st.session_state.search_type == "vector":
-                
-                results_list, suchworte = ask_mongo.vector_search(question)
-                if results_list != []:
-                    with st.expander("Entscheidungssuche"):
-                        st.write(f"Suchworte: {suchworte}")
-                        for result in results_list:
-                            st.write(f"{result['doknr']}")
-                            db_results_str += f"DokNr: {result['doknr']} Text: {result['text']}\n\n"
-                else:
-                    st.warning("Keine Ergebnisse gefunden.")
-        
-
-            if st.session_state.search_type == "fulltext":
-                
-                results_list, suchworte = ask_mongo.text_search(search_text=question, gen_suchworte=True, limit=10)
-                if results_list != []:
-                    with st.expander("Entscheidungssuche"):
-                        st.write(f"Suchworte: {suchworte}")
-                        for result in results_list:
-                            st.write(f"{result['doknr']}")
-                            db_results_str += f"Jahrgang: {result['jahrgang']}\nAusgabe: {result['ausgabe']}\nText: {result['text']}\n\n"
-                else:
-                    st.warning("Keine Ergebnisse gefunden.")
-        
-        
+                results_list, suchworte = ask_mongo.vector_search(search_text=question, limit=st.session_state.results_limit)
+            else:
+                results_list, suchworte = ask_mongo.fulltext_search_artikel(search_text=question, gen_suchworte=True, limit=st.session_state.results_limit)
             
+            if results_list != []:
+                with st.expander("Entscheidungssuche"):
+                    st.write(f"Suchworte: {suchworte}")
+                    for result in results_list:
+                        st.write(f"{result['doknr']} {result['text'][:50]}...")
+                        db_results_str += f"DokNr: {result['doknr']} Text: {result['text']}\n\n"
+            else:
+                st.warning("Keine Ergebnisse gefunden.")
+        
             st.session_state.results_db = db_results_str
                 
         # LLM Search ------------------------------------------------

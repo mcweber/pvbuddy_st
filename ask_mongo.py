@@ -208,7 +208,7 @@ def generate_filter(filter: list, field: str) -> dict:
     return {field: {"$in": filter}} if filter else {}
 
 # Search ------------------------------------------------
-def text_search(search_text: str = "*", gen_suchworte: bool = False, score: float = 0.0, limit: int = 10) -> (list, str):
+def fulltext_search_ausgaben(search_text: str = "*", gen_suchworte: bool = False, score: float = 0.0, limit: int = 10) -> (list, str):
     
     # define query ------------------------------------------------
     if search_text == "":
@@ -254,10 +254,56 @@ def text_search(search_text: str = "*", gen_suchworte: bool = False, score: floa
     return list(cursor), suchworte
 
 
-def vector_search(query_string: str = "*", gen_suchworte: bool = False, score: float = 0.0, filter : list = [], sort: str = "date", limit: int = 10) -> list[list, str]:
+def fulltext_search_artikel(search_text: str = "*", gen_suchworte: bool = False, score: float = 0.0, limit: int = 10) -> (list, str):
     
     # define query ------------------------------------------------
-    suchworte = generate_query(question=query_string) if gen_suchworte else query_string
+    if search_text == "":
+        return [], ""
+    if search_text == "*":
+        suchworte = "*"
+        score = 0.0
+        query = {
+            "index": "fulltext_text",
+            "exists": {"path": "doknr"},
+        }
+    else:
+        suchworte = generate_query(question=search_text) if gen_suchworte else search_text
+        query = {
+            "index": "fulltext_text",
+            "text": {
+                "query": suchworte,
+                "path": {"wildcard": "*"}
+            }
+        }
+
+    # define fields ------------------------------------------------
+    fields = {
+        "_id": 1,
+        "doknr": 1,
+        "start": 1,
+        "ende": 1,
+        "text": 1,
+        "score": {"$meta": "searchScore"},
+    }
+
+    # define pipeline ------------------------------------------------
+    pipeline = [
+        {"$search": query},
+        {"$project": fields},
+        {"$match": {"score": {"$gte": score}}},
+        {"$sort": {"doknr": -1}},
+        {"$limit": limit},
+    ]
+
+    # execute query ------------------------------------------------
+    cursor = coll_artikel.aggregate(pipeline)
+    return list(cursor), suchworte
+
+
+def vector_search(search_text: str = "*", gen_suchworte: bool = False, score: float = 0.0, filter : list = [], sort: str = "date", limit: int = 10) -> list[list, str]:
+    
+    # define query ------------------------------------------------
+    suchworte = generate_query(question=search_text) if gen_suchworte else search_text
     embeddings_query = create_embeddings(text=suchworte)
     query = {
             "index": "vector",
