@@ -7,7 +7,7 @@ VERSION ="09.02.2025"
 import streamlit as st
 import ask_llm
 # import ask_web
-import ask_legal_web
+#import ask_legal_web
 import ask_mongo
 # import manage_user as user
 # import manage_prompts as prompts
@@ -137,24 +137,24 @@ def main() -> None:
     if st.session_state.search_status:
 
         # Web Search ------------------------------------------------
-        web_results_str = ""
-        if st.session_state.search_web and st.session_state.results_web == "":
-            web_search_handler = ask_legal_web.LegalWebSearch()
-            results_statutes = web_search_handler.search_statutes(query=question, score=0.5, limit=st.session_state.results_limit)
-            results_jurisdiction = web_search_handler.search_jurisdiction(query=question, score=0.5, limit=st.session_state.results_limit)
-            results_comments = web_search_handler.search_comments(query=question, score=0.5, limit=st.session_state.results_limit)
-            web_results_str = results_statutes + results_jurisdiction + results_comments
-            with st.expander("WEB Suchergebnisse"):
-                st.write(results_statutes)
-                st.divider()
-                st.write(results_jurisdiction)
-                st.divider()
-                st.write(results_comments)
-                # for result in results:
-                #     st.write(f"[{round(result['score'], 3)}] {result['title']} [{result['url']}]")
-                #     # web_results_str += f"Titel: {result['title']}\nURL: {result['url']}\n\n"
-                #     web_results_str += f"Titel: {result['title']}\nURL: {result['url']}\nText: {result['content']}\n\n"
-            st.session_state.results_web = web_results_str
+        # web_results_str = ""
+        # if st.session_state.search_web and st.session_state.results_web == "":
+        #     web_search_handler = ask_legal_web.LegalWebSearch()
+        #     results_statutes = web_search_handler.search_statutes(query=question, score=0.5, limit=st.session_state.results_limit)
+        #     results_jurisdiction = web_search_handler.search_jurisdiction(query=question, score=0.5, limit=st.session_state.results_limit)
+        #     results_comments = web_search_handler.search_comments(query=question, score=0.5, limit=st.session_state.results_limit)
+        #     web_results_str = results_statutes + results_jurisdiction + results_comments
+        #     with st.expander("WEB Suchergebnisse"):
+        #         st.write(results_statutes)
+        #         st.divider()
+        #         st.write(results_jurisdiction)
+        #         st.divider()
+        #         st.write(results_comments)
+        #         # for result in results:
+        #         #     st.write(f"[{round(result['score'], 3)}] {result['title']} [{result['url']}]")
+        #         #     # web_results_str += f"Titel: {result['title']}\nURL: {result['url']}\n\n"
+        #         #     web_results_str += f"Titel: {result['title']}\nURL: {result['url']}\nText: {result['content']}\n\n"
+        #     st.session_state.results_web = web_results_str
 
         # Database Search ------------------------------------------------
         db_results_str = ""
