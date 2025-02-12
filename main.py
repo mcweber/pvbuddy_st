@@ -1,7 +1,8 @@
 # ---------------------------------------------------
-VERSION ="09.02.2025"
+VERSION ="12.02.2025"
 # Author: M. Weber
 # ---------------------------------------------------
+# 12.02.2024 added test4
 # ---------------------------------------------------
 
 import streamlit as st
@@ -50,8 +51,9 @@ def main() -> None:
         st.session_state.search_type: str = "fulltext"
         st.session_state.search_db: bool = True
         st.session_state.search_web: bool = False
+        st.session_state.sort_by: str = "score"
         st.session_state.history: list = []
-        st.session_state.results_limit:int  = 10
+        st.session_state.results_limit:int  = 20
         st.session_state.results_web: str = ""
         st.session_state.results_db: str = ""
 
@@ -73,10 +75,16 @@ def main() -> None:
             st.session_state.search_db = checkbox
             st.rerun()
 
-        RADIO_OPTIONS = ["fulltext","vector"]
+        RADIO_OPTIONS = ["fulltext", "vector"]
         radio = st.radio(label="Suchtyp", options=RADIO_OPTIONS, index=RADIO_OPTIONS.index(st.session_state.search_type))
         if radio != st.session_state.search_type:
             st.session_state.search_type = radio
+            st.rerun()
+
+        RADIO_OPTIONS = ["score", "doknr"]
+        radio = st.radio(label="Sortierung", options=RADIO_OPTIONS, index=RADIO_OPTIONS.index(st.session_state.sort_by))
+        if radio != st.session_state.sort_by:
+            st.session_state.sort_by = radio
             st.rerun()
         
         slider = st.slider("Search Results", min_value=0, max_value=50, value=st.session_state.results_limit, step=5)
@@ -104,18 +112,21 @@ def main() -> None:
             st.rerun()
 
     # Define Search Form ----------------------------------------------
-    question = st.chat_input("Frage oder test1, test2, test3 eingeben:")
+    question = st.chat_input("Frage oder test1, test2, test3, test4 eingeben:")
 
     if question:
     
         if question == "test1":
-            question = "was sagen die ausgaben zu El Pais?"
+            question = "Erstelle ein Dossier zu El Pais?"
 
         if question == "test2":
             question = "Erstelle ein Dossier zur Firma Readly. Welche Informationen sind relevant?"
 
         if question == "test3":
             question = "Was sind die Zeitungen mit den höchsten Digitalumsätzen?"
+
+        if question == "test4":
+            question = "Wie funktioniert das deutsche Presse Grosso System?"
     
         if question == "reset":
             st.session_state.history = []
@@ -133,15 +144,15 @@ def main() -> None:
         if st.session_state.search_db and st.session_state.results_db == "":
 
             if st.session_state.search_type == "vector":
-                results_list, suchworte = ask_mongo.vector_search(search_text=question, limit=st.session_state.results_limit)
+                results_list, suchworte = ask_mongo.vector_search(search_text=question, sort=st.session_state.sort_by, limit=st.session_state.results_limit)
             else:
-                results_list, suchworte = ask_mongo.fulltext_search_artikel(search_text=question, gen_suchworte=True, limit=st.session_state.results_limit)
+                results_list, suchworte = ask_mongo.fulltext_search_artikel(search_text=question, gen_suchworte=True, sort=st.session_state.sort_by, limit=st.session_state.results_limit)
             
             if results_list != []:
                 with st.expander("Entscheidungssuche"):
                     st.write(f"Suchworte: {suchworte}")
                     for result in results_list:
-                        st.write(f"{result['doknr']} {result['text'][:50]}...")
+                        st.write(f"{result['doknr']} [{result['score']:.2f}] {result['text'][:50].replace('\n', ' ')}...")
                         db_results_str += f"DokNr: {result['doknr']} Text: {result['text']}\n\n"
             else:
                 st.warning("Keine Ergebnisse gefunden.")

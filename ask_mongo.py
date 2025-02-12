@@ -1,8 +1,9 @@
 # ---------------------------------------------------
-# Version: 09.02.2025
+# Version: 12.02.2025
 # Author: M. Weber
 # ---------------------------------------------------
 # 09.02.2025 added chunks
+# 12.02.2025 added parameter for sorting search results
 # ---------------------------------------------------
 
 from datetime import datetime
@@ -41,6 +42,14 @@ model = BertModel.from_pretrained(model_name)
 
 # Define Database functions ----------------------------------
 def generate_abstracts(input_field: str, output_field: str, max_iterations: int = 20) -> None:
+    """
+    Generates abstracts for documents in the 'ausgaben' collection.
+    
+    Args:
+        input_field (str): The field containing the text to summarize.
+        output_field (str): The field to store the generated abstract.
+        max_iterations (int, optional): Maximum number of documents to process. Defaults to 20.
+    """
     cursor = coll_ausgaben.find({output_field: ""}).limit(max_iterations)
     cursor_list = list(cursor)
     for record in cursor_list:
@@ -51,6 +60,16 @@ def generate_abstracts(input_field: str, output_field: str, max_iterations: int 
     cursor.close()
 
 def write_summary(text: str = "", length: int = 500) -> str:
+    """
+    Writes a summary for the given text.
+    
+    Args:
+        text (str, optional): The text to summarize. Defaults to "".
+        length (int, optional): Maximum length of the summary in words. Defaults to 500.
+    
+    Returns:
+        str: The generated summary.
+    """
     if text == "":
         return "empty"
     system_prompt = f"""
@@ -68,6 +87,16 @@ def write_summary(text: str = "", length: int = 500) -> str:
     return llm.ask_llm(temperature=0.1, question=task, system_prompt=system_prompt, db_results_str=text)
     
 def write_takeaways(text: str = "", max_takeaways: int = 5) -> str:
+    """
+    Writes the key takeaways for the given text.
+    
+    Args:
+        text (str, optional): The text to extract takeaways from. Defaults to "".
+        max_takeaways (int, optional): Maximum number of takeaways. Defaults to 5.
+    
+    Returns:
+        str: The generated takeaways.
+    """
     if text == "":
         return "empty"
     system_prompt = """
@@ -83,22 +112,21 @@ def write_takeaways(text: str = "", max_takeaways: int = 5) -> str:
     return llm.ask_llm(temperature=0.1, question=task, system_prompt=system_prompt, db_results_str=text)
 
 # Chunks ------------------------------------------------
-def chunk_text_to_dataframe(text, chunk_size, overlap=0):
+def chunk_text_to_dataframe(text, chunk_size, overlap=0) -> list:
     """
-    Splits a text into chunks and stores them in a Pandas DataFrame.
+    Splits a text into chunks and stores them in a list.
 
     Args:
         text: The input text string.
         chunk_size: The desired size of each chunk (number of characters).
-        overlap: The number of overlapping characters between chunks.  Defaults to 0 (no overlap).
+        overlap: The number of overlapping characters between chunks. Defaults to 0 (no overlap).
 
     Returns:
-        A Pandas DataFrame where each row represents a chunk of text.  Returns an empty DataFrame if the input text is None or empty.
-        Returns None if chunk_size is invalid (<= 0) or overlap is negative or greater than or equal to chunk_size.
+        list: A list where each element represents a chunk of text. Returns None if the input text is None or empty.
     """
 
     if not text:  # Handle None or empty input
-        return pd.DataFrame()
+        return None
 
     if chunk_size <= 0:
       return None
@@ -116,11 +144,16 @@ def chunk_text_to_dataframe(text, chunk_size, overlap=0):
 
     return chunks
 
-
-
 # Embeddings -------------------------------------------------            
-def generate_embeddings(input_field: str, output_field: str, 
-                        max_iterations: int = 10) -> None:
+def generate_embeddings(input_field: str, output_field: str, max_iterations: int = 10) -> None:
+    """
+    Generates embeddings for documents in the 'ausgaben' collection.
+    
+    Args:
+        input_field (str): The field containing the text to generate embeddings for.
+        output_field (str): The field to store the generated embeddings.
+        max_iterations (int, optional): Maximum number of documents to process. Defaults to 10.
+    """
     cursor = coll_ausgaben.find({output_field: []}).limit(max_iterations)
     cursor_list = list(cursor)
     for record in cursor_list:
@@ -133,6 +166,15 @@ def generate_embeddings(input_field: str, output_field: str,
     print(f"\nGenerated embeddings for {max_iterations} records.")
 
 def create_embeddings(text: str) -> list:
+    """
+    Creates embeddings for the given text using a pre-trained BERT model.
+    
+    Args:
+        text (str): The text to generate embeddings for.
+    
+    Returns:
+        list: The generated embeddings.
+    """
     encoded_input = tokenizer(text, padding=True, truncation=True, return_tensors="pt")
     with torch.no_grad():
         model_output = model(**encoded_input)
@@ -140,6 +182,14 @@ def create_embeddings(text: str) -> list:
 
 # Keywords ---------------------------------------------------
 def generate_keywords(input_field: str, output_field: str, max_iterations: int = 10) -> None:
+    """
+    Generates keywords for documents in the 'ausgaben' collection.
+    
+    Args:
+        input_field (str): The field containing the text to generate keywords for.
+        output_field (str): The field to store the generated keywords.
+        max_iterations (int, optional): Maximum number of documents to process. Defaults to 10.
+    """
     print(f"Start: {input_field}|{output_field}")
     print(collection)
     cursor = coll_ausgaben.find({output_field: []}).limit(max_iterations)
@@ -161,6 +211,16 @@ def generate_keywords(input_field: str, output_field: str, max_iterations: int =
     cursor.close()
 
 def create_keywords(text: str = "", max_keywords: int = 5) -> list:
+    """
+    Creates keywords for the given text.
+    
+    Args:
+        text (str, optional): The text to generate keywords for. Defaults to "".
+        max_keywords (int, optional): Maximum number of keywords. Defaults to 5.
+    
+    Returns:
+        list: The generated keywords.
+    """
     if not text:
         return []
     system_prompt = """
@@ -178,6 +238,12 @@ def create_keywords(text: str = "", max_keywords: int = 5) -> list:
     return keywords_list
 
 def list_keywords() -> list:
+    """
+    Lists all keywords in the 'ausgaben' collection.
+    
+    Returns:
+        list: A list of keywords with their counts.
+    """
     pipeline = [
     {'$unwind': '$schlagworte'},
     {'$group': {
@@ -198,6 +264,15 @@ def list_keywords() -> list:
 
 # Query & Filter ------------------------------------------------
 def generate_query(question: str = "") -> str:
+    """
+    Generates search keywords based on the given question.
+    
+    Args:
+        question (str, optional): The question to generate keywords for. Defaults to "".
+    
+    Returns:
+        str: The generated search keywords.
+    """
     task = f"""
             Erstelle auf Basis der Frage '{question}' eine Liste von maximal 3 Schlagworten mit deren Hilfe relevante Dokumente zu der Fragestellung in einer Datenbank gefunden werden können.
             Das Format ist "Stichwort1" "Stichwort2" "Stichwort3"
@@ -205,10 +280,49 @@ def generate_query(question: str = "") -> str:
     return llm.ask_llm(temperature=0.1, question=task) 
     
 def generate_filter(filter: list, field: str) -> dict:
+    """
+    Generates a MongoDB filter based on the given list of values.
+    
+    Args:
+        filter (list): The list of values to filter by.
+        field (str): The field to filter on.
+    
+    Returns:
+        dict: The generated MongoDB filter.
+    """
     return {field: {"$in": filter}} if filter else {}
 
 # Search ------------------------------------------------
-def fulltext_search_ausgaben(search_text: str = "*", gen_suchworte: bool = False, score: float = 0.0, limit: int = 10) -> (list, str):
+def fulltext_search_ausgaben(search_text: str = "*", gen_suchworte: bool = False, sort: str = "score", score: float = 0.0, limit: int = 10) -> (list, str):
+    """
+    Performs a full-text search on MongoDB collection of issues (Ausgaben).
+    This function searches through documents using MongoDB's Atlas Search functionality.
+    It can either use the provided search text directly or generate search terms from
+    a natural language question.
+    Args:
+        search_text (str, optional): Text to search for. Use "*" for matching all documents.
+            Defaults to "*".
+        gen_suchworte (bool, optional): If True, generates search terms from the search_text
+            using the generate_query function. Defaults to False.
+        sort (str, optional): Field to sort results by. Defaults to "score".
+        score (float, optional): Minimum search score threshold for results. 
+            Defaults to 0.0.
+        limit (int, optional): Maximum number of results to return. Defaults to 10.
+    Returns:
+        tuple: A tuple containing:
+            - list: List of matching documents, each containing fields:
+                * _id: Document ID
+                * doknr: Document number
+                * jahrgang: Year
+                * ausgabe: Issue number
+                * text: Document text content
+                * score: Search relevance score
+            - str: The actual search terms used (either original search_text or generated terms)
+    Examples:
+        >>> results, terms = fulltext_search_ausgaben("climate change", gen_suchworte=True)
+        >>> results, terms = fulltext_search_ausgaben("*")  # Match all documents
+        >>> results, terms = fulltext_search_ausgaben("energy", score=0.5, limit=20)
+    """
     
     # define query ------------------------------------------------
     if search_text == "":
@@ -245,7 +359,7 @@ def fulltext_search_ausgaben(search_text: str = "*", gen_suchworte: bool = False
         {"$search": query},
         {"$project": fields},
         {"$match": {"score": {"$gte": score}}},
-        {"$sort": {"doknr": -1}},
+        {"$sort": {sort: -1}},
         {"$limit": limit},
     ]
 
@@ -254,7 +368,25 @@ def fulltext_search_ausgaben(search_text: str = "*", gen_suchworte: bool = False
     return list(cursor), suchworte
 
 
-def fulltext_search_artikel(search_text: str = "*", gen_suchworte: bool = False, score: float = 0.0, limit: int = 10) -> (list, str):
+def fulltext_search_artikel(search_text: str = "*", gen_suchworte: bool = False, sort: str = "score", score: float = 0.0, limit: int = 10) -> (list, str):
+    """
+    Performs a fulltext search on articles in MongoDB collection.
+    This function searches through articles using MongoDB's text search capabilities. It can either use
+    the provided search text directly or generate search terms based on the input question.
+    Args:
+        search_text (str, optional): Text to search for. Use "*" for matching all documents. Defaults to "*".
+        gen_suchworte (bool, optional): Whether to generate search terms from the question. Defaults to False.
+        sort (str, optional): Field to sort results by. Defaults to "score".
+        score (float, optional): Minimum search score threshold. Defaults to 0.0.
+        limit (int, optional): Maximum number of results to return. Defaults to 10.
+    Returns:
+        tuple: A tuple containing:
+            - list: List of matching documents, each containing _id, doknr, start, ende, text and score
+            - str: The search terms used (either original search_text or generated terms)
+    Example:
+        >>> results, terms = fulltext_search_artikel("example search", gen_suchworte=True)
+        >>> results, terms = fulltext_search_artikel("*")  # Match all documents
+    """
     
     # define query ------------------------------------------------
     if search_text == "":
@@ -291,7 +423,7 @@ def fulltext_search_artikel(search_text: str = "*", gen_suchworte: bool = False,
         {"$search": query},
         {"$project": fields},
         {"$match": {"score": {"$gte": score}}},
-        {"$sort": {"doknr": -1}},
+        {"$sort": {sort: -1}},
         {"$limit": limit},
     ]
 
@@ -300,7 +432,26 @@ def fulltext_search_artikel(search_text: str = "*", gen_suchworte: bool = False,
     return list(cursor), suchworte
 
 
-def vector_search(search_text: str = "*", gen_suchworte: bool = False, score: float = 0.0, filter : list = [], sort: str = "date", limit: int = 10) -> list[list, str]:
+def vector_search(search_text: str = "*", gen_suchworte: bool = False, sort: str = "score", score: float = 0.0, limit: int = 10 ,filter : list = []) -> list[list, str]:
+    """
+    Performs a vector search on a MongoDB collection using text embeddings.
+    This function searches through documents using vector similarity, optionally generating search keywords
+    from the input text. It returns a list of matching documents and the search terms used.
+    Args:
+        search_text (str, optional): Text to search for. Defaults to "*".
+        gen_suchworte (bool, optional): Whether to generate search keywords from search_text. Defaults to False.
+        sort (str, optional): Field to sort results by. Defaults to "score".
+        score (float, optional): Minimum similarity score threshold. Defaults to 0.0.
+        limit (int, optional): Maximum number of results to return. Defaults to 10.
+        filter (list, optional): List of source IDs to filter results. Defaults to empty list.
+    Returns:
+        tuple[list, str]: A tuple containing:
+            - list: Matching documents with their metadata and similarity scores
+            - str: The search terms used (either original or generated)
+    Example:
+        >>> results, terms = vector_search("machine learning", gen_suchworte=True, limit=5)
+        >>> print(f"Found {len(results)} matches using terms: {terms}")
+    """
     
     # define query ------------------------------------------------
     suchworte = generate_query(question=search_text) if gen_suchworte else search_text
@@ -339,6 +490,12 @@ def vector_search(search_text: str = "*", gen_suchworte: bool = False, score: fl
 
 # Diff ------------------------------------------------
 def group_by_field() -> dict:
+    """
+    Groups documents by the 'quelle_id' field and counts the number of documents in each group.
+    
+    Returns:
+        dict: A dictionary where keys are 'quelle_id' values and values are the counts of documents.
+    """
     pipeline = [
             {   
             '$group': {
@@ -361,10 +518,25 @@ def group_by_field() -> dict:
     return return_dict
 
 def list_fields() -> dict:
+    """
+    Lists all fields in a document from the 'ausgaben' collection.
+    
+    Returns:
+        dict: A dictionary of field names.
+    """
     result = coll_ausgaben.find_one()
     return result.keys()
 
 def get_document(id: str) -> dict:
+    """
+    Retrieves a document from the 'ausgaben' collection by its ID.
+    
+    Args:
+        id (str): The ID of the document to retrieve.
+    
+    Returns:
+        dict: The retrieved document.
+    """
     document = coll_ausgaben.find_one({"id": id})
     return document
 
@@ -372,8 +544,20 @@ def get_document(id: str) -> dict:
 # Config ------------------------------------------------
 
 def get_system_prompt() -> str:
+    """
+    Retrieves the system prompt from the 'config' collection.
+    
+    Returns:
+        str: The system prompt.
+    """
     result = coll_config.find_one({"key": "systemprompt"})
     return str(result["content"])
     
 def update_system_prompt(text: str = ""):
+    """
+    Updates the system prompt in the 'config' collection.
+    
+    Args:
+        text (str, optional): The new system prompt. Defaults to "".
+    """
     result = coll_config.update_one({"key": "systemprompt"}, {"$set": {"content": text}})
