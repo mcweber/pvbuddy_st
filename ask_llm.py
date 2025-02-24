@@ -1,10 +1,11 @@
 # ---------------------------------------------------
-# Version:05.01.2025
+# Version:14.01.2025
 # Author: M. Weber
 # ---------------------------------------------------
 # 30.08.2024 switched to class-based approach
 # 12.10.2024 added source documents
 # 05.01.2024 added o1, o1-mini, deepseek
+# 14.01.2025 added gemini 2.0 flash
 # ---------------------------------------------------
 # Description:
 # llm: gemini, o1, o1-mini, gpt4o, gpt4omini, deepseek, llama
@@ -156,7 +157,7 @@ class LLMHandler:
             response = self.groqClient.chat.completions.create(model="llama-3.3-70b-versatile", messages=input_messages)
             return response.choices[0].message.content
         elif self.LLM == "gemini":
-            response = self.geminiClient.chat.completions.create(model="gemini-1.5-flash-latest", temperature=temperature, messages=input_messages)
+            response = self.geminiClient.chat.completions.create(model="gemini-2.0-flash", temperature=temperature, messages=input_messages)
             return(response.choices[0].message.content)
         elif self.LLM == "deepseek":
             response = self.deepseekClient.chat.completions.create(model="deepseek-chat", temperature=temperature, messages=input_messages)

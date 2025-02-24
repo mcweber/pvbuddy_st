@@ -34,6 +34,7 @@ coll_config = database.config
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 model_name = "bert-base-german-cased" # 768 dimensions
 # model_name = "bert-base-multilingual-cased"
+# model_name = "deepset-mxbai-embed-de-large-v1 "
 tokenizer = BertTokenizer.from_pretrained(model_name)
 model = BertModel.from_pretrained(model_name)
 # model_name = "sentence-transformers/all-MiniLM-L6-v2"
@@ -481,7 +482,7 @@ def vector_search(search_text: str = "*", gen_suchworte: bool = False, sort: str
         # {"$match": {"quelle_id": {"$in": filter}}},
         {"$match": {"score": {"$gte": score}}},  # Move this up
         {"$sort": {sort: -1}},
-        {"$limit": limit},  # Add this stage
+        # {"$limit": limit},  # Add this stage
     ]
 
     # execute query ------------------------------------------------
@@ -551,7 +552,10 @@ def get_system_prompt() -> str:
         str: The system prompt.
     """
     result = coll_config.find_one({"key": "systemprompt"})
-    return str(result["content"])
+    if result is not None:
+        return str(result["content"])
+    else:
+        return ""
     
 def update_system_prompt(text: str = ""):
     """
