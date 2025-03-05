@@ -1,7 +1,8 @@
 # ---------------------------------------------------
-# Version: 20.02.2025
+# Version: 05.03.2025
 # Author: M. Weber
 # ---------------------------------------------------
+# 05.03.2025 switch to mwCluster01
 # ---------------------------------------------------
 
 """
@@ -18,7 +19,7 @@ from pymongo.errors import DuplicateKeyError
 # Define constants ----------------------------------
 load_dotenv()
 
-mongoClient = MongoClient(os.environ.get('MONGO_URI_PRIVAT'))
+mongoClient = MongoClient(os.environ.get('MONGO_URI_PRIVAT_01'))
 database = mongoClient.logbook
 coll_log = database.log
 
