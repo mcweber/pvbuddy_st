@@ -122,7 +122,7 @@ def main() -> None:
         "test1": "Erstelle ein Dossier zu El Pais?",
         "test2": "Erstelle ein Dossier zur Firma Readly. Welche Informationen sind relevant?", 
         "test3": "Was sind die Zeitungen mit den höchsten Digitalumsätzen?",
-        "test4": "Wie funktioniert das deutsche Presse Grosso System?"
+        "test4": "Wie funktioniert das deutsche Presse Grosso System?",
         "test5": "Wann hat der Economist seine Paywall eingeführt?"
     }
     
