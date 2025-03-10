@@ -1,5 +1,5 @@
 # ---------------------------------------------------
-VERSION ="24.02.2025"
+VERSION ="10.03.2025"
 # Author: M. Weber
 # ---------------------------------------------------
 # 12.02.2024 added test4
@@ -123,6 +123,7 @@ def main() -> None:
         "test2": "Erstelle ein Dossier zur Firma Readly. Welche Informationen sind relevant?", 
         "test3": "Was sind die Zeitungen mit den höchsten Digitalumsätzen?",
         "test4": "Wie funktioniert das deutsche Presse Grosso System?"
+        "test5": "Wann hat der Economist seine Paywall eingeführt?"
     }
     
     if question:
