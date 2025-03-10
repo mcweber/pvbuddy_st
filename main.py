@@ -151,7 +151,7 @@ def main() -> None:
             if st.session_state.search_type == "vector":
                 results_list, suchworte = ask_mongo.vector_search(search_text=question, sort=st.session_state.sort_by, limit=st.session_state.results_limit)
             else:
-                results_list, suchworte = ask_mongo.fulltext_search_artikel(search_text=question, gen_suchworte=False, sort=st.session_state.sort_by, limit=st.session_state.results_limit)
+                results_list, suchworte = ask_mongo.fulltext_search_artikel(search_text=question, gen_suchworte=True, sort=st.session_state.sort_by, limit=st.session_state.results_limit)
             if results_list != []:
                 with st.expander("DB Suchergebnisse"):
                     st.write(f"Suchworte: {suchworte}")
