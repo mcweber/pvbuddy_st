@@ -1,5 +1,5 @@
 # ---------------------------------------------------
-VERSION ="10.03.2025"
+VERSION ="11.03.2025"
 # Author: M. Weber
 # ---------------------------------------------------
 # 12.02.2024 added test4
@@ -116,14 +116,14 @@ def main() -> None:
             st.rerun()
 
     # Define Search Form ----------------------------------------------
-    question = st.chat_input("Frage oder test1, test2, test3, test4 eingeben:")
+    question = st.chat_input("Frage oder test1, test2, test3, test4, test5 eingeben:")
 
     TEST_QUERIES = {
         "test1": "Erstelle ein Dossier zu El Pais?",
         "test2": "Erstelle ein Dossier zur Firma Readly. Welche Informationen sind relevant?", 
         "test3": "Was sind die Zeitungen mit den höchsten Digitalumsätzen?",
         "test4": "Wie funktioniert das deutsche Presse Grosso System?",
-        "test5": "Wann hat der Economist seine Paywall eingeführt?"
+        "test5": "Wann hat The Economist seine Paywall installiert?"
     }
     
     if question:
