@@ -1,11 +1,12 @@
 # ---------------------------------------------------
-VERSION ="11.03.2025"
+VERSION ="08.04.2025"
 # Author: M. Weber
 # ---------------------------------------------------
 # 12.02.2024 added test4
 # 23.02.2025 added search_web
 # 23.02.2025 added logbook
 # 24.02.2025 added use dict for test queries
+# 08.04.2025 added direct_pdf
 # ---------------------------------------------------
 
 import streamlit as st
@@ -50,6 +51,7 @@ def main() -> None:
             ask_mongo.add_system_prompt("Du bist ein hilfreicher Assistent.")
         st.session_state.init: bool = True
         st.session_state.code: bool = False
+        st.session_state.direct_pdf: bool = False
         st.session_state.model: str = "gemini"
         st.session_state.system_prompt: str = ask_mongo.get_system_prompt()
         st.session_state.search_status: bool = False
@@ -61,43 +63,52 @@ def main() -> None:
         st.session_state.results_limit:int  = 20
         st.session_state.results_web: str = ""
         st.session_state.results_db: str = ""
+        st.session_state.results_pdf: list = []
 
-    if st.session_state.code == False:
+    if not st.session_state.code:
         login_code_dialog()
 
     # Define Sidebar ---------------------------------------------------
     with st.sidebar:
         st.header("pvBuddy")
-        st.caption(f"Version: {VERSION} Status: POC")
+        st.caption(f"Version: {VERSION} Status: POC Model: {st.session_state.model}")
 
-        radio = st.radio(label="Model", options=ask_llm.MODELS, index=ask_llm.MODELS.index(st.session_state.model))
-        if radio != st.session_state.model:
-            st.session_state.model = radio
+        checkbox = st.checkbox(label="PDF-Direkt", value=st.session_state.direct_pdf)
+        if checkbox != st.session_state.direct_pdf:
+            st.session_state.direct_pdf = checkbox
+            st.session_state.model = "gemini-pdf" if checkbox else "gemini"
+            st.session_state.results_limit = 10 if checkbox else 20
             st.rerun()
 
-        checkbox = st.checkbox(label="WEB-Suche", value=st.session_state.search_web)
-        if checkbox != st.session_state.search_web:
-            st.session_state.search_web = checkbox
-            st.rerun()
+        if not st.session_state.direct_pdf:
+            radio = st.selectbox(label="Model", options=ask_llm.MODELS, index=ask_llm.MODELS.index(st.session_state.model))
+            if radio != st.session_state.model:
+                st.session_state.model = radio
+                st.rerun()
 
-        checkbox = st.checkbox(label="DB-Suche", value=st.session_state.search_db)
-        if checkbox != st.session_state.search_db:
-            st.session_state.search_db = checkbox
-            st.rerun()
+            checkbox = st.checkbox(label="WEB-Suche", value=st.session_state.search_web)
+            if checkbox != st.session_state.search_web:
+                st.session_state.search_web = checkbox
+                st.rerun()
+
+            checkbox = st.checkbox(label="DB-Suche", value=st.session_state.search_db)
+            if checkbox != st.session_state.search_db:
+                st.session_state.search_db = checkbox
+                st.rerun()
 
         RADIO_OPTIONS = ["fulltext", "vector"]
-        radio = st.radio(label="Suchtyp", options=RADIO_OPTIONS, index=RADIO_OPTIONS.index(st.session_state.search_type))
+        radio = st.radio(label="Suchtyp", options=RADIO_OPTIONS, index=RADIO_OPTIONS.index(st.session_state.search_type), horizontal=True)
         if radio != st.session_state.search_type:
             st.session_state.search_type = radio
             st.rerun()
 
         RADIO_OPTIONS = ["score", "doknr"]
-        radio = st.radio(label="Sortierung", options=RADIO_OPTIONS, index=RADIO_OPTIONS.index(st.session_state.sort_by))
+        radio = st.radio(label="Sortierung", options=RADIO_OPTIONS, index=RADIO_OPTIONS.index(st.session_state.sort_by), horizontal=True)
         if radio != st.session_state.sort_by:
             st.session_state.sort_by = radio
             st.rerun()
         
-        slider = st.slider("Search Results", min_value=0, max_value=50, value=st.session_state.results_limit, step=5)
+        slider = st.number_input("Search Results", min_value=0, max_value=50, value=st.session_state.results_limit, step=5)
         if slider != st.session_state.results_limit:
             st.session_state.results_limit = slider
             st.rerun()
@@ -116,14 +127,13 @@ def main() -> None:
             st.rerun()
 
     # Define Search Form ----------------------------------------------
-    question = st.chat_input("Frage oder test1, test2, test3, test4, test5 eingeben:")
+    question = st.chat_input("Frage oder test1, test2, test3, test4 eingeben:")
 
     TEST_QUERIES = {
         "test1": "Erstelle ein Dossier zu El Pais?",
         "test2": "Erstelle ein Dossier zur Firma Readly. Welche Informationen sind relevant?", 
         "test3": "Was sind die Zeitungen mit den höchsten Digitalumsätzen?",
-        "test4": "Wie funktioniert das deutsche Presse Grosso System?",
-        "test5": "Wann hat The Economist seine Paywall installiert?"
+        "test4": "Wie funktioniert das deutsche Presse Grosso System?"
     }
     
     if question:
@@ -134,6 +144,8 @@ def main() -> None:
     # Define Search & Search Results -------------------------------------------
     if st.session_state.search_status:
 
+        llm_handler = ask_llm.LLMHandler(llm=st.session_state.model)
+        
         # Web Search ------------------------------------------------
         if st.session_state.search_web and st.session_state.results_web == "":
             web_results_str = ""
@@ -146,31 +158,52 @@ def main() -> None:
             st.session_state.results_web = web_results_str
 
         # Database Search ------------------------------------------------
-        if st.session_state.search_db and st.session_state.results_db == "":
+        if (st.session_state.search_db or st.sessionstate.direct_pdf) and st.session_state.results_db == "":
+            
             db_results_str = ""
+            
             if st.session_state.search_type == "vector":
                 results_list, suchworte = ask_mongo.vector_search(search_text=question, sort=st.session_state.sort_by, limit=st.session_state.results_limit)
+            
             else:
-                results_list, suchworte = ask_mongo.fulltext_search_artikel(search_text=question, gen_suchworte=True, sort=st.session_state.sort_by, limit=st.session_state.results_limit)
+                results_list, suchworte = ask_mongo.fulltext_search_artikel(search_text=question, gen_suchworte=False, sort=st.session_state.sort_by, limit=st.session_state.results_limit)
+            
             if results_list != []:
+            
+                pdf_list = []
+                dok_nr_list = []
+            
                 with st.expander("DB Suchergebnisse"):
                     st.write(f"Suchworte: {suchworte}")
+
                     for result in results_list:
-                        st.write(f"{result['doknr']} [{result['score']:.2f}] {result['text'][:50].replace('\n', ' ')}...")
-                        db_results_str += f"DokNr: {result['doknr']} Text: {result['text']}\n\n"
+                    
+                        if st.session_state.direct_pdf:
+                    
+                            if result['doknr'] not in dok_nr_list:
+                                st.write(f"{result['doknr']}")
+                                dok_nr_list.append(result['doknr'])
+                                pdf_binary = ask_mongo.fetch_pdf(doknr=result['doknr'])
+                                pdf_list.append(pdf_binary)
+                        else:
+                            st.write(f"{result['doknr']} [{result['score']:.2f}] {result['text'][:50].replace('\n', ' ')}...")
+                            db_results_str += f"DokNr: {result['doknr']} Text: {result['text']}\n\n"
+
             else:
                 st.warning("Keine Ergebnisse gefunden.")
+            
             st.session_state.results_db = db_results_str
+            st.session_state.results_pdf = pdf_list
                 
         # LLM Search ------------------------------------------------
-        llm_handler = ask_llm.LLMHandler()
         summary = llm_handler.ask_llm(
             temperature=0.2,
             question=question,
             history=st.session_state.history,
             system_prompt=st.session_state.system_prompt,
             db_results_str=st.session_state.results_db,
-            web_results_str=st.session_state.results_web
+            web_results_str=st.session_state.results_web,
+            source_docs=st.session_state.results_pdf,
             )
         st.session_state.history.append({"role": "user", "content": question})
         st.session_state.history.append({"role": "assistant", "content": summary})

@@ -1,13 +1,15 @@
 # ---------------------------------------------------
-# Version: 12.02.2025
+# Version: 08.04.2025
 # Author: M. Weber
 # ---------------------------------------------------
 # 09.02.2025 added chunks
 # 12.02.2025 added parameter for sorting search results
+# 08.04.2025 added fetch_pdf
 # ---------------------------------------------------
 
 from datetime import datetime
 import os
+import base64
 from dotenv import load_dotenv
 
 import ask_llm
@@ -60,6 +62,7 @@ def generate_abstracts(input_field: str, output_field: str, max_iterations: int 
         coll_ausgaben.update_one({"_id": record.get('_id')}, {"$set": {output_field: abstract}})
     cursor.close()
 
+
 def write_summary(text: str = "", length: int = 500) -> str:
     """
     Writes a summary for the given text.
@@ -86,7 +89,8 @@ def write_summary(text: str = "", length: int = 500) -> str:
             Die Antwort darf nur aus dem eigentlichen Text der Zusammenfassung bestehen.
             """
     return llm.ask_llm(temperature=0.1, question=task, system_prompt=system_prompt, db_results_str=text)
-    
+
+
 def write_takeaways(text: str = "", max_takeaways: int = 5) -> str:
     """
     Writes the key takeaways for the given text.
@@ -111,6 +115,7 @@ def write_takeaways(text: str = "", max_takeaways: int = 5) -> str:
             Die Antwort darf nur aus den eigentlichen Aussagen bestehen.
             """
     return llm.ask_llm(temperature=0.1, question=task, system_prompt=system_prompt, db_results_str=text)
+
 
 # Chunks ------------------------------------------------
 def chunk_text_to_dataframe(text, chunk_size, overlap=0) -> list:
@@ -145,6 +150,7 @@ def chunk_text_to_dataframe(text, chunk_size, overlap=0) -> list:
 
     return chunks
 
+
 # Embeddings -------------------------------------------------            
 def generate_embeddings(input_field: str, output_field: str, max_iterations: int = 10) -> None:
     """
@@ -166,6 +172,7 @@ def generate_embeddings(input_field: str, output_field: str, max_iterations: int
             coll_ausgaben.update_one({"_id": record['_id']}, {"$set": {output_field: embeddings}})
     print(f"\nGenerated embeddings for {max_iterations} records.")
 
+
 def create_embeddings(text: str) -> list:
     """
     Creates embeddings for the given text using a pre-trained BERT model.
@@ -181,6 +188,7 @@ def create_embeddings(text: str) -> list:
         model_output = model(**encoded_input)
     return model_output.last_hidden_state.mean(dim=1).squeeze().tolist()
 
+
 # Keywords ---------------------------------------------------
 def generate_keywords(input_field: str, output_field: str, max_iterations: int = 10) -> None:
     """
@@ -195,7 +203,7 @@ def generate_keywords(input_field: str, output_field: str, max_iterations: int =
     print(collection)
     cursor = coll_ausgaben.find({output_field: []}).limit(max_iterations)
     if cursor:
-        print(f"MongoDB Suche abgeschlossen.")
+        print("MongoDB Suche abgeschlossen.")
         cursor_list = list(cursor)
         print(f"Anzahl Records: {len(cursor_list)}")
         for record in cursor_list:
@@ -210,6 +218,7 @@ def generate_keywords(input_field: str, output_field: str, max_iterations: int =
     else:
         st.error("No articles without summary found.")
     cursor.close()
+
 
 def create_keywords(text: str = "", max_keywords: int = 5) -> list:
     """
@@ -238,6 +247,7 @@ def create_keywords(text: str = "", max_keywords: int = 5) -> list:
     keywords_list = [keyword.strip() for keyword in keywords_str.split(',') if keyword.strip()]
     return keywords_list
 
+
 def list_keywords() -> list:
     """
     Lists all keywords in the 'ausgaben' collection.
@@ -263,6 +273,7 @@ def list_keywords() -> list:
     cursor_list = list(coll_ausgaben.aggregate(pipeline))
     return cursor_list
 
+
 # Query & Filter ------------------------------------------------
 def generate_query(question: str = "") -> str:
     """
@@ -280,6 +291,7 @@ def generate_query(question: str = "") -> str:
             """
     return llm.ask_llm(temperature=0.1, question=task) 
     
+
 def generate_filter(filter: list, field: str) -> dict:
     """
     Generates a MongoDB filter based on the given list of values.
@@ -292,6 +304,7 @@ def generate_filter(filter: list, field: str) -> dict:
         dict: The generated MongoDB filter.
     """
     return {field: {"$in": filter}} if filter else {}
+
 
 # Search ------------------------------------------------
 def fulltext_search_ausgaben(search_text: str = "*", gen_suchworte: bool = False, sort: str = "score", score: float = 0.0, limit: int = 10) -> (list, str):
@@ -489,7 +502,25 @@ def vector_search(search_text: str = "*", gen_suchworte: bool = False, sort: str
     cursor = coll_artikel.aggregate(pipeline)
     return list(cursor), suchworte
 
+
 # Diff ------------------------------------------------
+def fetch_pdf(doknr: str) -> bytes:
+    """
+    Retrieves a PDF document from the 'ausgaben' collection by its document number.
+    
+    Args:
+        doknr (str): The document number of the PDF to retrieve.
+    
+    Returns:
+        bytes: The PDF document as binary data.
+    """
+    ausgabe = coll_ausgaben.find_one({"doknr": doknr})
+    pdf_base64 = ausgabe["pdf"]
+    pdf_binary = base64.b64decode(pdf_base64)
+    
+    return pdf_binary
+
+
 def group_by_field() -> dict:
     """
     Groups documents by the 'quelle_id' field and counts the number of documents in each group.
@@ -518,6 +549,7 @@ def group_by_field() -> dict:
         return_dict[item['_id']] = item['count']
     return return_dict
 
+
 def list_fields() -> dict:
     """
     Lists all fields in a document from the 'ausgaben' collection.
@@ -527,6 +559,7 @@ def list_fields() -> dict:
     """
     result = coll_ausgaben.find_one()
     return result.keys()
+
 
 def get_document(id: str) -> dict:
     """
@@ -543,7 +576,6 @@ def get_document(id: str) -> dict:
 
 
 # Config ------------------------------------------------
-
 def get_system_prompt() -> str:
     """
     Retrieves the system prompt from the 'config' collection.
@@ -557,6 +589,7 @@ def get_system_prompt() -> str:
     else:
         return ""
     
+
 def update_system_prompt(text: str = ""):
     """
     Updates the system prompt in the 'config' collection.

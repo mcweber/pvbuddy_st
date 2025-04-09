@@ -27,6 +27,7 @@ google-api-core
 google-api-python-client
 google-auth
 google-auth-httplib2
+google-genai
 google-generativeai
 googleapis-common-protos
 groq
@@ -82,6 +83,7 @@ pygments
 pymongo
 pymupdf
 pyparsing
+pypdf
 pyreqwest-impersonate
 python-dateutil
 python-dotenv
@@ -118,3 +120,4 @@ tzdata
 uritemplate
 urllib3
 wcwidth
+websockets
