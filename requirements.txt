@@ -102,7 +102,7 @@ six
 smmap
 sniffio
 stack-data
-streamlit
+streamlit==1.45.0
 sympy
 tavily-python
 tenacity
